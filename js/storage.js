@@ -1,4 +1,5 @@
-// Шар даних на Supabase. API: saveResult, getResults, deleteResult, subscribe.
+// Шар даних на Supabase. API: createSession, updateSession, finishSession,
+// saveResult, getResults, deleteResult, subscribe.
 const DataStore = (() => {
   const TABLE = 'results';
   const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
@@ -43,6 +44,24 @@ const DataStore = (() => {
   }
 
   return {
+    // Сесія створюється одразу після введення імені.
+    async createSession({ name, total, answers }) {
+      return unwrap(
+        await db.from(TABLE).insert({ name, total, answers, status: 'in_progress' }).select('id').single(),
+      );
+    },
+
+    async updateSession(id, { answers }) {
+      unwrap(await db.from(TABLE).update({ answers }).eq('id', id));
+    },
+
+    // Якщо сесію вже завершено (повторна спроба після обриву зв'язку),
+    // RLS просто не знайде рядок для оновлення — це не помилка.
+    async finishSession(id, { score, duration_ms, answers }) {
+      unwrap(await db.from(TABLE).update({ score, duration_ms, answers, status: 'finished' }).eq('id', id));
+    },
+
+    // Запасний шлях, якщо сесію на старті створити не вдалося.
     async saveResult(result) {
       const { name, score, total, duration_ms, answers } = result;
       return unwrap(

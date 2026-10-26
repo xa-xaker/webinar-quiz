@@ -482,7 +482,7 @@ p { margin: 0 0 1em; }
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
   margin-bottom: 16px;
 }
@@ -597,6 +597,8 @@ p { margin: 0 0 1em; }
 
   h1 { font-size: 2rem; }
 
+  .stats { grid-template-columns: repeat(4, 1fr); }
+
   .board thead { display: table-header-group; }
 
   .board th {
@@ -697,6 +699,65 @@ p { margin: 0 0 1em; }
 }
 
 .layout .card + .card { margin-top: 0; }
+
+.layout__main {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* Хто проходить зараз */
+.sessions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.session {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  transition: opacity 0.2s;
+}
+
+.session__head,
+.session__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.session__name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.session__count {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.session__progress {
+  margin: 8px 0 6px;
+}
+
+.session__meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.session--idle {
+  opacity: 0.55;
+}
+
+.session--idle .progress__bar {
+  background: var(--muted);
+}
 
 @media (min-width: 960px) {
   .layout { grid-template-columns: 3fr 2fr; align-items: start; }

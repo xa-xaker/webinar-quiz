@@ -22,7 +22,11 @@
 
     <section class="stats" aria-label="Зведення">
       <div class="stat">
-        <div class="stat__label">Учасників</div>
+        <div class="stat__label">Проходять зараз</div>
+        <div id="stat-live" class="stat__value">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">Завершили</div>
         <div id="stat-count" class="stat__value">0</div>
       </div>
       <div class="stat">
@@ -36,23 +40,31 @@
     </section>
 
     <div class="layout">
-      <section class="card">
-        <h2>Таблиця лідерів</h2>
-        <table class="board">
-          <thead>
-            <tr>
-              <th class="c-rank">#</th>
-              <th class="c-name">Ім'я</th>
-              <th class="c-score">Бал</th>
-              <th class="c-time">Час</th>
-              <th class="c-date">Дата</th>
-              <th class="c-action"><span class="hidden">Дії</span></th>
-            </tr>
-          </thead>
-          <tbody id="board-body"></tbody>
-        </table>
-        <div id="board-empty" class="empty">Поки немає результатів</div>
-      </section>
+      <div class="layout__main">
+        <section class="card">
+          <h2>Проходять зараз</h2>
+          <ul id="live-list" class="sessions"></ul>
+          <div id="live-empty" class="empty">Зараз ніхто не проходить тест</div>
+        </section>
+
+        <section class="card">
+          <h2>Таблиця лідерів</h2>
+          <table class="board">
+            <thead>
+              <tr>
+                <th class="c-rank">#</th>
+                <th class="c-name">Ім'я</th>
+                <th class="c-score">Бал</th>
+                <th class="c-time">Час</th>
+                <th class="c-date">Дата</th>
+                <th class="c-action"><span class="hidden">Дії</span></th>
+              </tr>
+            </thead>
+            <tbody id="board-body"></tbody>
+          </table>
+          <div id="board-empty" class="empty">Поки немає результатів</div>
+        </section>
+      </div>
 
       <section class="card">
         <h2>Статистика по питаннях</h2>

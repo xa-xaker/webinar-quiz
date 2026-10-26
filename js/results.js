@@ -1,9 +1,13 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const dateFmt = new Intl.DateTimeFormat('uk-UA', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const IDLE_AFTER_MS = 5 * 60 * 1000; // без відповідей стільки часу — «неактивний»
 
-  let results = [];
-  let knownIds = null; // null — перший рендер, без підсвічування
+  let rows = [];
+  let results = []; // завершені сесії
+  let live = []; // сесії в процесі
+  let knownFinished = null; // null — перший рендер, без підсвічування
+  let knownLive = null;
   let pendingDelete = null;
 
   $('quiz-title').textContent = QUIZ_TITLE;
@@ -17,6 +21,7 @@
   function renderSummary() {
     const n = results.length;
     $('stat-count').textContent = n;
+    $('stat-live').textContent = live.length;
     if (!n) {
       $('stat-avg').textContent = '—';
       $('stat-time').textContent = '—';
@@ -28,48 +33,96 @@
     $('stat-time').textContent = formatDuration(avgTime);
   }
 
-  // ---------- таблиця лідерів ----------
+  // ---------- видалення з підтвердженням ----------
 
-  function actionCell(r) {
-    const td = el('td', { className: 'c-action' });
-    if (pendingDelete === r.id) {
-      const yes = el('button', { type: 'button', className: 'btn btn--danger btn--small' }, 'Так');
-      const no = el('button', { type: 'button', className: 'btn btn--ghost btn--small' }, 'Ні');
-      yes.addEventListener('click', async () => {
-        yes.disabled = no.disabled = true;
-        try {
-          await DataStore.deleteResult(r.id);
-        } catch (err) {
-          console.error(err);
-          yes.disabled = no.disabled = false;
-          return;
-        }
-        pendingDelete = null;
-        await refresh();
-      });
-      no.addEventListener('click', () => {
-        pendingDelete = null;
-        renderBoard();
-      });
-      td.append(el('span', { className: 'confirm' }, yes, no));
-    } else {
+  function deleteControl(r) {
+    if (pendingDelete !== r.id) {
       const del = el('button', { type: 'button', className: 'link-btn' }, 'Видалити');
-      del.setAttribute('aria-label', `Видалити результат ${r.name}`);
+      del.setAttribute('aria-label', `Видалити ${r.name}`);
       del.addEventListener('click', () => {
         pendingDelete = r.id;
-        renderBoard();
+        rerender();
       });
-      td.append(del);
+      return del;
     }
-    return td;
+    const yes = el('button', { type: 'button', className: 'btn btn--danger btn--small' }, 'Так');
+    const no = el('button', { type: 'button', className: 'btn btn--ghost btn--small' }, 'Ні');
+    yes.addEventListener('click', async () => {
+      yes.disabled = no.disabled = true;
+      try {
+        await DataStore.deleteResult(r.id);
+      } catch (err) {
+        console.error(err);
+        yes.disabled = no.disabled = false;
+        return;
+      }
+      pendingDelete = null;
+      await refresh();
+    });
+    no.addEventListener('click', () => {
+      pendingDelete = null;
+      rerender();
+    });
+    return el('span', { className: 'confirm' }, yes, no);
   }
+
+  // ---------- хто проходить зараз ----------
+
+  function answeredCount(r) {
+    return (r.answers || []).filter((a) => a != null).length;
+  }
+
+  function renderLive() {
+    $('live-empty').classList.toggle('hidden', live.length > 0);
+    $('live-list').replaceChildren(
+      ...live.map((r) => {
+        const done = answeredCount(r);
+        const bar = el('div', { className: 'progress__bar' });
+        bar.style.width = `${(done / r.total) * 100}%`;
+
+        const item = el('li', { className: 'session' },
+          el('div', { className: 'session__head' },
+            el('span', { className: 'session__name' }, r.name),
+            el('span', { className: 'session__count' }, `${done} з ${r.total}`),
+          ),
+          el('div', { className: 'progress session__progress' }, bar),
+          el('div', { className: 'session__foot' },
+            el('span', { className: 'session__meta' },
+              el('span', { className: 'session__time' }),
+              el('span', { className: 'session__state' }),
+            ),
+            deleteControl(r),
+          ),
+        );
+        item.dataset.started = r.created_at;
+        item.dataset.updated = r.updated_at;
+        if (knownLive && !knownLive.has(r.id)) item.classList.add('row--new');
+        return item;
+      }),
+    );
+    tickLive();
+  }
+
+  // Щосекунди оновлюємо лише таймери, без повного перерендеру.
+  function tickLive() {
+    const now = Date.now();
+    $('live-list').querySelectorAll('.session').forEach((item) => {
+      const idle = now - new Date(item.dataset.updated).getTime() > IDLE_AFTER_MS;
+      item.classList.toggle('session--idle', idle);
+      item.querySelector('.session__time').textContent = `⏱ ${formatDuration(now - new Date(item.dataset.started).getTime())}`;
+      item.querySelector('.session__state').textContent = idle ? ' · неактивний' : '';
+    });
+  }
+
+  setInterval(tickLive, 1000);
+
+  // ---------- таблиця лідерів ----------
 
   function renderBoard() {
     const sorted = sortResults(results);
-    const body = $('board-body');
     $('board-empty').classList.toggle('hidden', sorted.length > 0);
 
-    body.replaceChildren(
+    $('board-body').replaceChildren(
       ...sorted.map((r, i) => {
         const rank = i + 1;
         const time = formatDuration(r.duration_ms);
@@ -81,15 +134,15 @@
           el('td', { className: 'c-time' }, time),
           el('td', { className: 'c-date' }, date),
           el('td', { className: 'c-meta' }, `⏱ ${time} · ${date}`),
-          actionCell(r),
+          el('td', { className: 'c-action' }, deleteControl(r)),
         );
-        if (knownIds && !knownIds.has(r.id)) tr.classList.add('row--new');
+        if (knownFinished && !knownFinished.has(r.id)) tr.classList.add('row--new');
         return tr;
       }),
     );
   }
 
-  // ---------- статистика по питаннях ----------
+  // ---------- статистика по питаннях (лише завершені сесії) ----------
 
   function renderQuestionStats() {
     $('qstats').replaceChildren(
@@ -136,13 +189,25 @@
 
   // ---------- оновлення ----------
 
-  function render(list) {
-    results = list;
-    if (pendingDelete && !results.some((r) => r.id === pendingDelete)) pendingDelete = null;
-    renderSummary();
+  function rerender() {
+    renderLive();
     renderBoard();
+  }
+
+  function render(list) {
+    rows = list;
+    // Рядки без статусу — записи, збережені до появи сесій.
+    results = rows.filter((r) => r.status !== 'in_progress');
+    live = rows
+      .filter((r) => r.status === 'in_progress')
+      .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    if (pendingDelete && !rows.some((r) => r.id === pendingDelete)) pendingDelete = null;
+
+    renderSummary();
+    rerender();
     renderQuestionStats();
-    knownIds = new Set(results.map((r) => r.id));
+    knownFinished = new Set(results.map((r) => r.id));
+    knownLive = new Set(live.map((r) => r.id));
   }
 
   async function refresh() {

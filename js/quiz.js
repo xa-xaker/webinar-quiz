@@ -11,11 +11,12 @@
 
   let state = loadState();
   let timerId = null;
+  let syncChain = Promise.resolve();
 
   // ---------- стан у sessionStorage ----------
 
   function freshState() {
-    return { name: '', answers: Array(total).fill(null), current: 0, startedAt: null, finishedAt: null, saved: false };
+    return { name: '', sessionId: null, answers: Array(total).fill(null), current: 0, startedAt: null, finishedAt: null, saved: false };
   }
 
   function loadState() {
@@ -30,6 +31,26 @@
     try {
       sessionStorage.setItem(STATE_KEY, JSON.stringify(state));
     } catch {}
+  }
+
+  // ---------- синхронізація прогресу з сервером ----------
+
+  // Запити йдуть строго по черзі, щоб старіший стан не перезаписав новіший.
+  // Помилки не блокують тест: наступна синхронізація повторить спробу.
+  function syncProgress() {
+    syncChain = syncChain
+      .then(async () => {
+        if (state.finishedAt) return;
+        if (!state.sessionId) {
+          const { id } = await DataStore.createSession({ name: state.name, total, answers: state.answers });
+          state.sessionId = id;
+          saveState();
+        } else {
+          await DataStore.updateSession(state.sessionId, { answers: state.answers });
+        }
+      })
+      .catch((err) => console.error('Не вдалося синхронізувати прогрес', err));
+    return syncChain;
   }
 
   // ---------- екрани ----------
@@ -84,6 +105,7 @@
   function selectOption(i) {
     state.answers[state.current] = i;
     saveState();
+    syncProgress();
     $('options').querySelectorAll('.option').forEach((btn, idx) => btn.setAttribute('aria-checked', String(idx === i)));
     $('btn-next').disabled = false;
   }
@@ -119,14 +141,18 @@
     if (!state.saved) {
       const btn = $('btn-next');
       btn.disabled = true;
+      const result = {
+        score: computeScore(),
+        duration_ms: state.finishedAt - state.startedAt,
+        answers: state.answers,
+      };
       try {
-        await DataStore.saveResult({
-          name: state.name,
-          score: computeScore(),
-          total,
-          duration_ms: state.finishedAt - state.startedAt,
-          answers: state.answers,
-        });
+        await syncChain;
+        if (state.sessionId) {
+          await DataStore.finishSession(state.sessionId, result);
+        } else {
+          await DataStore.saveResult({ name: state.name, total, ...result });
+        }
         state.saved = true;
         saveState();
       } catch (err) {
@@ -218,6 +244,7 @@
     state.startedAt = Date.now();
     saveState();
     renderQuestion();
+    syncProgress();
   });
 
   $('btn-next').addEventListener('click', () => {
@@ -256,6 +283,7 @@
     finish();
   } else if (state.startedAt) {
     renderQuestion();
+    if (!state.sessionId) syncProgress();
   } else {
     renderStart();
   }
