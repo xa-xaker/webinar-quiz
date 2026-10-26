@@ -1,55 +1,64 @@
-// Шар даних. Зараз — localStorage; пізніше цей файл буде замінено на Supabase
-// з тим самим асинхронним API: saveResult, getResults, deleteResult, subscribe.
+// Шар даних на Supabase. API: saveResult, getResults, deleteResult, subscribe.
 const DataStore = (() => {
-  const KEY = 'quiz-results-v1';
-  const listeners = new Set();
-
-  function read() {
-    try {
-      const data = JSON.parse(localStorage.getItem(KEY));
-      return Array.isArray(data) ? data : [];
-    } catch {
-      return [];
-    }
-  }
-
-  function write(list) {
-    localStorage.setItem(KEY, JSON.stringify(list));
-    notify();
-  }
-
-  function notify() {
-    const list = read();
-    listeners.forEach((cb) => cb(list));
-  }
-
-  function uuid() {
-    if (crypto.randomUUID) return crypto.randomUUID();
-    return Date.now().toString(36) + Math.random().toString(36).slice(2);
-  }
-
-  // Зміни з інших вкладок (імітація realtime).
-  window.addEventListener('storage', (e) => {
-    if (e.key === KEY) notify();
+  const TABLE = 'results';
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: false },
   });
+  const listeners = new Set();
+  let channel = null;
+  let refetchTimer = null;
+
+  function unwrap({ data, error }) {
+    if (error) throw error;
+    return data;
+  }
+
+  async function getResults() {
+    return unwrap(await db.from(TABLE).select('*').order('created_at', { ascending: true }));
+  }
+
+  // Будь-яка зміна в таблиці → перечитуємо список (з невеликою паузою,
+  // щоб серія вставок під час вебінару дала один запит, а не десятки).
+  function scheduleRefetch() {
+    clearTimeout(refetchTimer);
+    refetchTimer = setTimeout(async () => {
+      try {
+        const list = await getResults();
+        listeners.forEach((cb) => cb(list));
+      } catch (err) {
+        console.error('Не вдалося оновити результати', err);
+      }
+    }, 300);
+  }
+
+  function ensureChannel() {
+    if (channel) return;
+    channel = db
+      .channel('results-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: TABLE }, scheduleRefetch)
+      .subscribe((status) => {
+        // Після перепідключення могли пропустити події — перечитуємо.
+        if (status === 'SUBSCRIBED') scheduleRefetch();
+      });
+  }
 
   return {
     async saveResult(result) {
-      const record = { ...result, id: uuid(), created_at: new Date().toISOString() };
-      write([...read(), record]);
-      return record;
+      const { name, score, total, duration_ms, answers } = result;
+      return unwrap(
+        await db.from(TABLE).insert({ name, score, total, duration_ms, answers }).select().single(),
+      );
     },
 
-    async getResults() {
-      return read();
-    },
+    getResults,
 
     async deleteResult(id) {
-      write(read().filter((r) => r.id !== id));
+      unwrap(await db.from(TABLE).delete().eq('id', id));
     },
 
     subscribe(callback) {
       listeners.add(callback);
+      ensureChannel();
       return () => listeners.delete(callback);
     },
   };

@@ -150,5 +150,8 @@
   }
 
   DataStore.subscribe(render);
-  refresh();
+  refresh().catch((err) => {
+    console.error(err);
+    $('board-empty').textContent = 'Не вдалося завантажити результати. Перевірте з’єднання й оновіть сторінку.';
+  });
 })();
