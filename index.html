@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Тренажер тестів</title>
+  <meta name="description" content="Тест «Штучний інтелект у розробці та освіті»">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="container">
+
+    <!-- Старт -->
+    <section id="screen-start" class="card fade-in hidden">
+      <span class="eyebrow">Тренажер тестів</span>
+      <h1 id="quiz-title"></h1>
+      <ul class="intro-list">
+        <li id="intro-count"></li>
+        <li>4 варіанти відповіді, один правильний</li>
+        <li>Таймер рахує час проходження</li>
+        <li>Наприкінці — бал і розбір помилок</li>
+      </ul>
+      <form id="start-form" novalidate>
+        <label class="field">
+          <span class="field__label">Ваше ім'я</span>
+          <input id="name-input" class="field__input" type="text" name="name" autocomplete="name" maxlength="40" placeholder="Наприклад, Олена Коваль" required>
+          <div id="name-error" class="field__error" aria-live="polite"></div>
+        </label>
+        <button type="submit" class="btn btn--primary btn--block">Почати тест</button>
+      </form>
+    </section>
+
+    <!-- Питання -->
+    <section id="screen-quiz" class="card hidden">
+      <div class="quiz-top">
+        <span id="q-counter"></span>
+        <span class="timer" role="timer" aria-label="Час проходження">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>
+          <span id="timer">00:00</span>
+        </span>
+      </div>
+      <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+        <div id="progress-bar" class="progress__bar"></div>
+      </div>
+      <div id="question-box">
+        <h2 id="q-text" class="question__text"></h2>
+        <div id="options" class="options" role="radiogroup" aria-labelledby="q-text"></div>
+      </div>
+      <div class="quiz-nav">
+        <button id="btn-prev" type="button" class="btn btn--ghost">Назад</button>
+        <button id="btn-next" type="button" class="btn btn--primary" disabled>Далі</button>
+      </div>
+    </section>
+
+    <!-- Результат -->
+    <section id="screen-result" class="hidden">
+      <div class="card fade-in" aria-live="polite">
+        <div class="score">
+          <div id="score-ring" class="score__ring">
+            <div class="score__inner">
+              <div id="score-value" class="score__value"></div>
+              <div id="score-pct" class="score__pct"></div>
+            </div>
+          </div>
+          <div class="score__meta">
+            <span id="result-name"></span>
+            <span id="result-time"></span>
+          </div>
+          <p id="score-verdict" class="score__verdict"></p>
+        </div>
+      </div>
+      <div class="card fade-in">
+        <h2 id="review-title">Розбір помилок</h2>
+        <div id="review" class="review"></div>
+      </div>
+      <button id="btn-restart" type="button" class="btn btn--ghost btn--block" style="margin-top:16px">Пройти ще раз</button>
+    </section>
+
+  </main>
+
+  <script src="questions.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/quiz.js"></script>
+</body>
+</html>

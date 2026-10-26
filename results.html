@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="uk">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Результати тесту</title>
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="container container--wide">
+    <header class="page-head">
+      <div>
+        <span class="eyebrow">Панель викладача</span>
+        <h1 id="quiz-title"></h1>
+      </div>
+      <span class="live"><span class="live__dot" aria-hidden="true"></span>Оновлюється в реальному часі</span>
+    </header>
+
+    <section class="stats" aria-label="Зведення">
+      <div class="stat">
+        <div class="stat__label">Учасників</div>
+        <div id="stat-count" class="stat__value">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">Середній бал</div>
+        <div id="stat-avg" class="stat__value">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat__label">Середній час</div>
+        <div id="stat-time" class="stat__value">—</div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <section class="card">
+        <h2>Таблиця лідерів</h2>
+        <table class="board">
+          <thead>
+            <tr>
+              <th class="c-rank">#</th>
+              <th class="c-name">Ім'я</th>
+              <th class="c-score">Бал</th>
+              <th class="c-time">Час</th>
+              <th class="c-date">Дата</th>
+              <th class="c-action"><span class="hidden">Дії</span></th>
+            </tr>
+          </thead>
+          <tbody id="board-body"></tbody>
+        </table>
+        <div id="board-empty" class="empty">Поки немає результатів</div>
+      </section>
+
+      <section class="card">
+        <h2>Статистика по питаннях</h2>
+        <div id="qstats" class="qstats"></div>
+      </section>
+    </div>
+
+    <p class="footer-link"><a href="./">Сторінка тесту для студентів</a></p>
+  </main>
+
+  <script src="questions.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/results.js"></script>
+</body>
+</html>
